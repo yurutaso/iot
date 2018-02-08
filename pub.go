@@ -9,7 +9,7 @@ func main() {
 	const MQTT_BROKER = "tcp://127.0.0.1:1883"
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(MQTT_BROKER)
-	opts.SetClientID("localhost")
+	opts.SetClientID("publisher")
 	client := MQTT.NewClient(opts)
 	defer client.Disconnect(250)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
