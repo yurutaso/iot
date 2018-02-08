@@ -15,7 +15,6 @@ func main() {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatal(token.Error())
 	}
-
 	token := client.Publish("go-mqtt/sample", 0, false, `{"message": "hello"}`)
 	token.Wait()
 }
