@@ -12,13 +12,13 @@ import (
 
 func NewTLSConfig() *tls.Config {
 	certs := x509.NewCertPool()
-	pem, err := ioutil.ReadFile(`samplecerts/CAfile.pem`)
+	pem, err := ioutil.ReadFile(`samplecerts/server.csr`)
 	if err != nil {
 		log.Fatal(err)
 	}
 	certs.AppendCertsFromPEM(pem)
 
-	cert, err := tls.LoadX509KeyPair("samplecerts/client-crt.pem", "samplecerts/client-key.pem")
+	cert, err := tls.LoadX509KeyPair("samplecerts/server.crt", "samplecerts/server.key")
 	if err != nil {
 		log.Fatal(err)
 	}
