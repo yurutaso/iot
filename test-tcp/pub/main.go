@@ -6,8 +6,7 @@ import (
 )
 
 func main() {
-	//const MQTT_BROKER = "tcp://127.0.0.1:1883"
-	const MQTT_BROKER = "tcp://192.168.11.40:1883"
+	const MQTT_BROKER = "tcp://127.0.0.1:1883"
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(MQTT_BROKER)
 	opts.SetClientID("publisher")
