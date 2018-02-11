@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	iot.HttpsServer()
+	iot.Subscribe()
 }
