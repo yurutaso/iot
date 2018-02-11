@@ -1,15 +1,30 @@
 package iot
 
 import (
-	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 )
+
+const (
+	ACCOUNT_DB string = `/usr/local/etc/webhook-account/passwd.db`
+)
+
+type WebhookHandler struct {
+	broker *Broker
+	topic  string
+}
+
+func NewWebhookHandler(broker *Broker) *WebhookHandler {
+	return &WebhookHandler{broker: broker}
+}
+
+func (handler *WebhookHandler) SetTopic(topic string) {
+	handler.topic = topic
+}
 
 func hasKey(dict map[string][]string, key string) bool {
 	if _, ok := dict[key]; ok {
@@ -19,7 +34,7 @@ func hasKey(dict map[string][]string, key string) bool {
 }
 
 func checkIdKey(id string, key string) (bool, error) {
-	db, err := sql.Open("sqlite3", "account/passwd.db")
+	db, err := sql.Open("sqlite3", ACCOUNT_DB)
 	if err != nil {
 		return false, err
 	}
@@ -37,7 +52,7 @@ func checkIdKey(id string, key string) (bool, error) {
 	return false, nil
 }
 
-func Webhook(w http.ResponseWriter, r *http.Request) {
+func (handler *WebhookHandler) PublishPost(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	form := r.Form
 	id := ""
@@ -63,27 +78,8 @@ func Webhook(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
-		Publish(string(formString))
+		handler.broker.Publish(handler.topic, string(formString))
 	} else {
 		return
 	}
-}
-
-func HttpsServer() {
-	certManager := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(DOMAIN),
-		Cache:      autocert.DirCache("/usr/local/etc/webhook-certs"),
-	}
-
-	http.HandleFunc("/", Webhook)
-
-	server := &http.Server{
-		Addr: ":https",
-		TLSConfig: &tls.Config{
-			GetCertificate: certManager.GetCertificate,
-		},
-	}
-	go http.ListenAndServe(":http", certManager.HTTPHandler(nil))
-	log.Fatal(server.ListenAndServeTLS("", ""))
 }

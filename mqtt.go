@@ -9,24 +9,44 @@ import (
 	"time"
 )
 
-const (
-	DOMAIN   string = "domain.net"
-	USERNAME string = "username for mqtt"
-	PASSWORD string = "password for mqtt"
-	CAFILE   string = "/etc/mosquitto/ca_certificates/ca.crt"
-	CRTFILE  string = "/etc/mosquitto/certs-client/client.crt"
-	KEYFILE  string = "/etc/mosquitto/certs-client/client.key"
-)
+type Broker struct {
+	domain        string
+	username      string
+	password      string
+	cafile        string
+	clientCrtfile string
+	clientKeyfile string
+	clientID      string
+}
 
-func NewTLSConfig(clientID string) (*MQTT.ClientOptions, error) {
+func NewBroker(domain string) *Broker {
+	return &Broker{domain: domain}
+}
+
+func (broker *Broker) SetUserPassword(username, password string) {
+	broker.username = username
+	broker.password = password
+}
+
+func (broker *Broker) SetClientID(clientID string) {
+	broker.clientID = clientID
+}
+
+func (broker *Broker) SetCertFiles(cafile, crtfile, keyfile string) {
+	broker.cafile = cafile
+	broker.clientCrtfile = crtfile
+	broker.clientKeyfile = keyfile
+}
+
+func (broker *Broker) NewTLSConfig() (*MQTT.ClientOptions, error) {
 	certs := x509.NewCertPool()
-	pem, err := ioutil.ReadFile(CAFILE)
+	pem, err := ioutil.ReadFile(broker.cafile)
 	if err != nil {
 		return nil, err
 	}
 	certs.AppendCertsFromPEM(pem)
 
-	cert, err := tls.LoadX509KeyPair(CRTFILE, KEYFILE)
+	cert, err := tls.LoadX509KeyPair(broker.clientCrtfile, broker.clientKeyfile)
 	if err != nil {
 		return nil, err
 	}
@@ -39,35 +59,35 @@ func NewTLSConfig(clientID string) (*MQTT.ClientOptions, error) {
 	}
 
 	opts := MQTT.NewClientOptions()
-	opts.AddBroker("ssl://" + DOMAIN + ":8883")
-	opts.SetClientID(clientID)
-	if USERNAME != "" {
-		opts.SetUsername(USERNAME)
+	opts.AddBroker("ssl://" + broker.domain + ":8883")
+	opts.SetClientID(broker.clientID)
+	if broker.username != "" {
+		opts.SetUsername(broker.username)
 	}
-	if PASSWORD != "" {
-		opts.SetPassword(PASSWORD)
+	if broker.password != "" {
+		opts.SetPassword(broker.password)
 	}
 	opts.SetTLSConfig(tlsconfig)
 
 	return opts, nil
 }
 
-var f MQTT.MessageHandler = func(client MQTT.Client, message MQTT.Message) {
-	fmt.Printf("TOPIC: %s\n", message.Topic())
-	fmt.Printf("MSG: %s\n", message.Payload())
+func PrintTopicMessage(client MQTT.Client, message MQTT.Message) {
+	fmt.Printf("Topic: %s\n", message.Topic())
+	fmt.Printf("Message: %s\n", message.Payload())
 }
 
-func Subscribe(f MQTT.MessageHandler) error {
-	opts, err := NewTLSConfig("subscriber")
+func (broker *Broker) Subscribe(topic string, handler MQTT.MessageHandler) error {
+	opts, err := broker.NewTLSConfig()
 	if err != nil {
 		return err
 	}
 	client := MQTT.NewClient(opts)
-	defer client.Disconnect(250)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	token := client.Subscribe("/myMQTT", 0, f)
+	defer client.Disconnect(250)
+	token := client.Subscribe(topic, 0, handler)
 	if token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
@@ -75,17 +95,18 @@ func Subscribe(f MQTT.MessageHandler) error {
 		time.Sleep(1 * time.Second)
 	}
 }
-func Publish(message string) error {
-	opts, err := NewTLSConfig("publisher")
+
+func (broker *Broker) Publish(topic, message string) error {
+	opts, err := broker.NewTLSConfig()
 	if err != nil {
 		return err
 	}
 	client := MQTT.NewClient(opts)
-	defer client.Disconnect(250)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-	token := client.Publish("/myMQTT", 0, false, message)
+	defer client.Disconnect(250)
+	token := client.Publish(topic, 0, false, message)
 	token.Wait()
 	return nil
 }
