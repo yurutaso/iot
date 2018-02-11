@@ -1,4 +1,4 @@
-package main
+package webhook
 
 import (
 	"crypto/tls"
@@ -11,7 +11,7 @@ import (
 
 const (
 	DOMAIN   string = "domain.net"
-	USERNAME string = "usrname for mqtt"
+	USERNAME string = "username for mqtt"
 	PASSWORD string = "password for mqtt"
 	CAFILE   string = "/etc/mosquitto/ca_certificates/ca.crt"
 	CRTFILE  string = "/etc/mosquitto/certs-client/client.crt"
