@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/yurutaso/iot"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
@@ -23,30 +24,25 @@ func main() {
 	args := os.Args
 	argc := len(args)
 	if argc != 3 {
-		log.Fatal(fmt.Errorf("Usage: passwdCheck username password"))
+		log.Fatal(fmt.Errorf("Usage: passwd username password"))
 	}
 	username := args[1]
 	password := args[2]
-	db, err := sql.Open("sqlite3", "passwd.db")
+	hashpassword, err := hashPassword(password)
 	if err != nil {
 		log.Fatal(err)
 	}
-	rows, err := db.Query(`SELECT key from "CERTS" where name=?`, username)
+	db, err := sql.Open("sqlite3", iot.ACCOUNT_DB)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var hash string
-	for rows.Next() {
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := rows.Scan(&hash); err != nil {
-			log.Fatal(err)
-			fmt.Println("NO")
-		} else {
-			if CheckPasswordHash(password, hash) {
-				fmt.Println("OK")
-			}
-		}
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS "CERTS" ("name" VARCHAR(255), "key" VARCHAR(255))`)
+	if err != nil {
+		log.Fatal(err)
 	}
+	_, err = db.Exec(`REPLACE INTO "CERTS" ("name", "key") VALUES (?, ?)`, username, hashpassword)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db.Close()
 }
