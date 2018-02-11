@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/yurutaso/iot"
+	"log"
 	"os"
 )
 
@@ -12,5 +13,16 @@ func main() {
 		fmt.Printf("Usage: publish text")
 		return
 	}
-	iot.Publish(args[1])
+	broker := iot.NewBroker(`domain of broker`)
+	broker.SetUserPassword(`username`, `password`)
+	broker.SetClientID(`publisher`) // any character is OK, but it must be different from other client's ID
+	broker.SetCertFiles(
+		`/path/to/ca.crt`,
+		`/path/to/client.crt`,
+		`/path/to/client.key`,
+	)
+	err := broker.Publish(`topic`, args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
 }
